@@ -190,7 +190,12 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 			int ram = Integer.parseInt(hostElement.getElementsByTagName("ram").item(0).getTextContent());
 			long storage = Long.parseLong(hostElement.getElementsByTagName("storage").item(0).getTextContent());
 			long bandwidth = SimSettings.getInstance().getWlanBandwidth() / hostNodeList.getLength();
-
+                        double maxEnergyConsumption = 0;
+                        double idleEnergyConsumption = 0;
+                        double energyWeight = 0;
+                        double transmissionPower = 0;
+                        double receptionPower = 0;
+                        boolean active = true;
 			// 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
 			//    create a list to store these PEs before creating
 			//    a Machine.
@@ -210,11 +215,12 @@ public class VehicularEdgeServerManager extends EdgeServerManager{
 					storage,
 					peList,
 					new VmSchedulerSpaceShared(peList),
-                                        0,
-                                        0,
-                                        0,
-                                        0,
-                                        0
+                                        maxEnergyConsumption,
+                                        idleEnergyConsumption,
+                                        energyWeight,
+                                        transmissionPower,
+                                        receptionPower,
+                                        active
 					);
 
 			host.setPlace(new Location(placeTypeIndex, wlan_id, x_pos, y_pos));

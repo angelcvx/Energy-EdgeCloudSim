@@ -28,8 +28,8 @@ public class MobileHost extends Host {
 	
 	public MobileHost(int id, RamProvisioner ramProvisioner,
 			BwProvisioner bwProvisioner, long storage,
-			List<? extends Pe> peList, VmScheduler vmScheduler, double maxEnergyConsumption, double idleEnergyConsumption, double energyWeight, double transmissionPower, double receptionPower) {
-		super(id, ramProvisioner, bwProvisioner, storage, peList, vmScheduler, maxEnergyConsumption, idleEnergyConsumption, energyWeight, transmissionPower, receptionPower);
+			List<? extends Pe> peList, VmScheduler vmScheduler, double maxEnergyConsumption, double idleEnergyConsumption, double energyWeight, double transmissionPower, double receptionPower, boolean active) {
+		super(id, ramProvisioner, bwProvisioner, storage, peList, vmScheduler, maxEnergyConsumption, idleEnergyConsumption, energyWeight, transmissionPower, receptionPower, active);
 
 	}
 	

@@ -46,6 +46,7 @@ import edu.boun.edgecloudsim.edge_client.CpuUtilizationModel_Custom;
 import edu.boun.edgecloudsim.edge_client.Task;
 import edu.boun.edgecloudsim.edge_server.EdgeVM;
 import edu.boun.edgecloudsim.utils.SimLogger.NETWORK_ERRORS;
+import java.util.List;
 import org.cloudbus.cloudsim.Host;
 import org.cloudbus.cloudsim.core.CloudSim;
 
@@ -70,6 +71,8 @@ public class SimLogger {
 	private Map<Integer, LogItem> taskMap;
 	private LinkedList<VmLoadLogItem> vmLoadList;
 	private LinkedList<ApDelayLogItem> apDelayList;
+        private Map<Integer, Double> hostsEnergyConsumption;
+
 
 	private static SimLogger singleton = new SimLogger();
 	
@@ -195,8 +198,8 @@ public class SimLogger {
 		taskMap = new HashMap<Integer, LogItem>();
 		vmLoadList = new LinkedList<VmLoadLogItem>();
 		apDelayList = new LinkedList<ApDelayLogItem>();
-		
-		numOfAppTypes = SimSettings.getInstance().getTaskLookUpTable().length;
+                hostsEnergyConsumption = new HashMap<Integer, Double>();	
+                numOfAppTypes = SimSettings.getInstance().getTaskLookUpTable().length;
 		
 		if (SimSettings.getInstance().getDeepFileLoggingEnabled()) {
 			try {
@@ -286,9 +289,12 @@ public class SimLogger {
 		taskMap.get(taskId).setUploadDelay(delay, delayType);
 	}
         
-        public void incrementEnergyConsumption(double energyConsumption) {
-		this.energyConsumption += energyConsumption;
-	}
+        public void incrementEnergyConsumption(double energyConsumption, int hostId) {    
+                if (hostId < SimManager.getInstance().getEdgeServerManager().getDatacenterList().size()){
+                    this.energyConsumption += energyConsumption;
+                    hostsEnergyConsumption.put(hostId, hostsEnergyConsumption.getOrDefault(hostId, 0.0) + energyConsumption);
+                }
+        }
 
 	public void setDownloadDelay(int taskId, double delay, NETWORK_DELAY_TYPES delayType) {
 		taskMap.get(taskId).setDownloadDelay(delay, delayType);
@@ -303,10 +309,9 @@ public class SimLogger {
 	}
 
 	public void taskEnded(int taskId, double time) {
-		taskMap.get(taskId).taskEnded(time);
-                
+		taskMap.get(taskId).taskEnded(time);         
                 //checking if the task is completed and was assigned to a edge device
-                if(taskMap.get(taskId).getStatus() == SimLogger.TASK_STATUS.COMLETED && taskMap.get(taskId).getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal()){
+                if(taskMap.get(taskId).getVmType() == SimSettings.VM_TYPES.EDGE_VM.ordinal()){
                         calculateEnergyConsumption(taskId);
                 }
 		recordLog(taskId);
@@ -328,14 +333,14 @@ public class SimLogger {
 	}
 
 	public void failedDueToBandwidth(int taskId, double time, NETWORK_DELAY_TYPES delayType) {
-		calculateEnergyConsumption(taskId);
                 taskMap.get(taskId).taskFailedDueToBandwidth(time, delayType);
+                calculateEnergyConsumption(taskId);
 		recordLog(taskId);
 	}
 
 	public void failedDueToMobility(int taskId, double time) {
-                calculateEnergyConsumption(taskId);
 		taskMap.get(taskId).taskFailedDueToMobility(time);
+                calculateEnergyConsumption(taskId);
 		recordLog(taskId);
 	}
 
@@ -359,6 +364,8 @@ public class SimLogger {
 	
 	public void simStopped() throws IOException {
 		endTime = System.currentTimeMillis();
+                //angel: considering the idle energy consumption of the active hosts
+                considerIdleEnergyConsumptionOnStop(endTime);
 		File vmLoadFile = null, locationFile = null, apUploadDelayFile = null, apDownloadDelayFile = null;
 		FileWriter vmLoadFW = null, locationFW = null, apUploadDelayFW = null, apDownloadDelayFW = null;
 		BufferedWriter vmLoadBW = null, locationBW = null, apUploadDelayBW = null, apDownloadDelayBW = null;
@@ -765,8 +772,11 @@ public class SimLogger {
 		printLine("average overhead: " + orchestratorOverhead[numOfAppTypes] / (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + " ns");
 		printLine("average QoE (for all): " + QoE[numOfAppTypes] / (failedTask[numOfAppTypes] + completedTask[numOfAppTypes]) + "%");
 		printLine("average QoE (for executed): " + QoE[numOfAppTypes] / completedTask[numOfAppTypes] + "%");
-		printLine("***************");
-                printLine("energy consumption: " + energyConsumption + " J");
+		printLine("******* ENERGY CONSUMPTION *******");
+                printLine("whole energy consumption: " + energyConsumption + " J");       
+                hostsEnergyConsumption.keySet().forEach(hostId -> {
+                    printLine("    Node " + hostId + ": " + hostsEnergyConsumption.get(hostId) + " J");
+                });
                 printLine("***************");
 		// clear related collections (map list etc.)
 		taskMap.clear();
@@ -896,8 +906,23 @@ public class SimLogger {
                             //calculating the communication energy consumption:
                     energyResult += dataToRecive/vm.getBw() * host.getTransmissionPower() + dataToSend/vm.getBw() * host.getReceptionPower();
                     //incrementing the whole energy consumption according to the results
-                    incrementEnergyConsumption(energyResult);
+                    incrementEnergyConsumption(energyResult, hostId);
                 }
+        }
+        
+        public void considerIdleEnergyConsumptionOnStop (double stopTime) {
+            List<Host> hosts = SimManager.getInstance().getCloudServerManager().getDatacenter().getHostList();
+            for (int i=0; i< hosts.size(); i++) {
+                if (hosts.get(i).isActive()){
+                    incrementEnergyConsumption(calculateIdleEnergyConsumption(hosts.get(i), stopTime - hosts.get(i).getStartedTime()), hosts.get(i).getId());
+                }
+            }
+        }
+        
+        public double  calculateIdleEnergyConsumption (Host host, double time) {
+            double result = 0;
+            result = host.getIdleEnergyConsumption() * host.getmaxEnergyConsumption() * time;
+            return result;
         }
 
 }

@@ -57,7 +57,7 @@ public class SimSettings {
 	private double INTERVAL_TO_GET_AP_DELAY_LOG; //minutes unit in properties file
 	private boolean FILE_LOG_ENABLED; //boolean to check file logging option
 	private boolean DEEP_FILE_LOG_ENABLED; //boolean to check deep file logging option
-
+                
 	private int MIN_NUM_OF_MOBILE_DEVICES;
 	private int MAX_NUM_OF_MOBILE_DEVICES;
 	private int MOBILE_DEVICE_COUNTER_SIZE;
@@ -67,8 +67,8 @@ public class SimSettings {
 	private int NUM_OF_EDGE_HOSTS;
 	private int NUM_OF_EDGE_VMS;
 	private int NUM_OF_PLACE_TYPES;
-
-	private double WAN_PROPAGATION_DELAY; //seconds unit in properties file
+	
+        private double WAN_PROPAGATION_DELAY; //seconds unit in properties file
 	private double GSM_PROPAGATION_DELAY; //seconds unit in properties file
 	private double LAN_INTERNAL_DELAY; //seconds unit in properties file
 	private int BANDWITH_WLAN; //Mbps unit in properties file
@@ -223,7 +223,7 @@ public class SimSettings {
 		return edgeDevicesDoc;
 	}
 
-
+        
 	/**
 	 * returns simulation time (in seconds unit) from properties file
 	 */
@@ -271,7 +271,7 @@ public class SimSettings {
 	{
 		return FILE_LOG_ENABLED && DEEP_FILE_LOG_ENABLED; 
 	}
-
+        
 	/**
 	 * returns deep statistics logging status from properties file
 	 */

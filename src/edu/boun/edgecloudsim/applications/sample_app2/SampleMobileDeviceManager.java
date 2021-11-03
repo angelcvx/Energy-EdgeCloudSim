@@ -328,7 +328,9 @@ public class SampleMobileDeviceManager extends MobileDeviceManager {
 			
 			if(selectedVM != null){
 				//set related host id
-				task.setAssociatedDatacenterId(nextHopId);
+                                //angel: set datacenterId
+                                task.setAssociatedDatacenterId(nextHopId);
+                                //task.setAssociatedDatacenterId(selectedVM.getHost().getDatacenter().getId());
 
 				//set related host id
 				task.setAssociatedHostId(selectedVM.getHost().getId());

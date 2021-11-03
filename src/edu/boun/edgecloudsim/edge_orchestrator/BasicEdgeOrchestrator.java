@@ -29,20 +29,21 @@ import edu.boun.edgecloudsim.utils.Location;
 import edu.boun.edgecloudsim.utils.SimUtils;
 import edu.boun.edgecloudsim.utils.SimLogger;
 import java.util.stream.DoubleStream;
+import org.cloudbus.cloudsim.Datacenter;
 
 public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 	private int numberOfHost; //used by load balancer
 	private int lastSelectedHostIndex; //used by load balancer
 	private int[] lastSelectedVmIndexes; //used by each host individually
-        private int [] taskLenght = {2000, 400, 3000, 750}; //list with the lenght of the tasks according to their type
-	public BasicEdgeOrchestrator(String _policy, String _simScenario) {
+	
+        public BasicEdgeOrchestrator(String _policy, String _simScenario) {
 		super(_policy, _simScenario);
 	}
 
 	@Override
 	public void initialize() {
+                //angel:modifying number of hosts used by the orchestrator
 		numberOfHost=SimSettings.getInstance().getNumOfEdgeHosts();
-		
 		lastSelectedHostIndex = -1;
 		lastSelectedVmIndexes = new int[numberOfHost];
 		for(int i=0; i<numberOfHost; i++)
@@ -93,14 +94,15 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 		return selectedVM;
 	}
 	
+        //this method selects the host and VM appropiated for each task
 	public EdgeVM selectVmOnHost(Task task){
 		EdgeVM selectedVM = null;
 		double energyConsumptionAssignment = 999999999;
                 double idleEnergyConsumption = 0;
-
 		Location deviceLocation = SimManager.getInstance().getMobilityModel().getLocation(task.getMobileDeviceId(), CloudSim.clock());
                 //in our scenasrio, serving wlan ID is equal to the host id
 		//because there is only one host in one place
+                
 		int relatedHostId=deviceLocation.getServingWlanId();
      		List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(relatedHostId);
 		
@@ -162,21 +164,21 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 		}
                 else if(policy.equalsIgnoreCase("MIMNIMIZE_ENERGY_CONSUMPTION")){
 			double selectedVmCapacity = 101; //start with max value
-			for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
-				double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
-				double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());				
+                        for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
+                                double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
+                                double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());				
                                 //calculating energy consumption
-                                 double energyConsumption [] = calculateEnergyConsumption(vmArray.get(vmIndex), task);
-                                        double wholeEnergyConsumption = DoubleStream.of(calculateEnergyConsumption(vmArray.get(vmIndex), task)).sum();                                                 
-                                        if (wholeEnergyConsumption < energyConsumptionAssignment){
-                                                if(requiredCapacity <= targetVmCapacity && targetVmCapacity < selectedVmCapacity){
-                                                        selectedVM = vmArray.get(vmIndex);
-                                                        selectedVmCapacity = targetVmCapacity;
-                                                        energyConsumptionAssignment = wholeEnergyConsumption;
-                                                        idleEnergyConsumption = energyConsumption[0];
-                                                }
-					}
-			}
+                                double energyConsumption [] = calculateEnergyConsumption(vmArray.get(vmIndex), task);
+                                double wholeEnergyConsumption = DoubleStream.of(calculateEnergyConsumption(vmArray.get(vmIndex), task)).sum();                                                 
+                                if (wholeEnergyConsumption < energyConsumptionAssignment){
+                                        if(requiredCapacity <= targetVmCapacity && targetVmCapacity < selectedVmCapacity){
+                                                selectedVM = vmArray.get(vmIndex);
+                                                selectedVmCapacity = targetVmCapacity;
+                                                energyConsumptionAssignment = wholeEnergyConsumption;
+                                                idleEnergyConsumption = energyConsumption[0];
+                                        }
+                                }
+                        }	
 		}
 		return selectedVM;
 	}
@@ -260,29 +262,26 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 			}
 		} 
                 else if(policy.equalsIgnoreCase("MINIMIZE_ENERGY_CONSUMPTION")){
-			double selectedVmCapacity = 101; //start with max value
 			for(int hostIndex=0; hostIndex<numberOfHost; hostIndex++){
 				List<EdgeVM> vmArray = SimManager.getInstance().getEdgeServerManager().getVmList(hostIndex);
 				for(int vmIndex=0; vmIndex<vmArray.size(); vmIndex++){
 					double requiredCapacity = ((CpuUtilizationModel_Custom)task.getUtilizationModelCpu()).predictUtilization(vmArray.get(vmIndex).getVmType());
 					double targetVmCapacity = (double)100 - vmArray.get(vmIndex).getCloudletScheduler().getTotalUtilizationOfCpu(CloudSim.clock());
                                         //calculating energy consumption
-                                        double energyConsumption [] = calculateEnergyConsumption(vmArray.get(vmIndex), task);
-                                        double wholeEnergyConsumption = DoubleStream.of(calculateEnergyConsumption(vmArray.get(vmIndex), task)).sum();                                                 
-                                        if (wholeEnergyConsumption < energyConsumptionAssignment){
-                                                if(requiredCapacity <= targetVmCapacity && targetVmCapacity < selectedVmCapacity){
-                                                        selectedVM = vmArray.get(vmIndex);
-                                                        selectedVmCapacity = targetVmCapacity;
-                                                        energyConsumptionAssignment = wholeEnergyConsumption;
-                                                        idleEnergyConsumption = energyConsumption[0];
-                                                }
-					}
-                                        
+                                        double wholeEnergyConsumption = DoubleStream.of(calculateEnergyConsumption(vmArray.get(vmIndex), task)).sum();
+                                        if (wholeEnergyConsumption < energyConsumptionAssignment && requiredCapacity <= targetVmCapacity){            
+                                                selectedVM = vmArray.get(vmIndex);
+                                                energyConsumptionAssignment = wholeEnergyConsumption;
+					} 
 				}
 			}                        
 		}
-                SS.incrementEnergyConsumption(idleEnergyConsumption);
-    		return selectedVM;
+                //if the host is not active yet, we set its status and starttime (without warm up delay)
+                if (selectedVM.getHost().isActive() == false) {
+                    selectedVM.getHost().setStatus(true);
+                    selectedVM.getHost().setStartedTime(CloudSim.clock());
+                }
+                return selectedVM;
 	}
 
 	@Override
@@ -303,6 +302,24 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
 		
 	}
         
+        public void deactivateHost (Host host) {
+            double idleEnergyConsumption = calculateIdleEnergyConsumption (host, CloudSim.clock() - host.getStartedTime());
+            host.setStatus(false);
+            host.setStartedTime(0);
+            SimLogger.getInstance().incrementEnergyConsumption(idleEnergyConsumption, host.getId());
+        }
+        
+        public void activeHost (Host host) {
+            host.setStatus(true);
+            host.setStartedTime(CloudSim.clock());
+        }
+        
+        public double  calculateIdleEnergyConsumption (Host host, double time) {
+            double result = 0;
+            result = host.getIdleEnergyConsumption() * host.getmaxEnergyConsumption() * time;
+            return result;
+        }
+        
         //this function return two variables, the idle and the dynamic energy consumption
         public double [] calculateEnergyConsumption(EdgeVM vm, Task task) {
                 //the first 
@@ -318,7 +335,7 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
                 //relation between the total amount of mips and the vm's mips
                 double relationCPU = host.getTotalMips()/vm.getMips();
                 //it the host was idle before the execution, we add the base energy consumption to the result 
-                if (host.getAvailableMips() == host.getTotalMips()){
+                if (host.isActive() == false){
                         idleEnergyConsumption = host.getmaxEnergyConsumption() * host.getIdleEnergyConsumption() * simulationRemainingTime;
                 }
                 //calculating dynamic energy consumption
@@ -349,4 +366,5 @@ public class BasicEdgeOrchestrator extends EdgeOrchestrator {
                 energyConsumption += ((1 - idleEnergyConsumptionHost) * maxEnergyConsumptionHost * (vmCPUrequired/100)) * relationCPU * energyWeightHost;
                 return energyConsumption;
         }
+        
 }

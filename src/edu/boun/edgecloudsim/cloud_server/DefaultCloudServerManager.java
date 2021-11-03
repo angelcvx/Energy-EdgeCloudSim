@@ -143,6 +143,7 @@ public class DefaultCloudServerManager extends CloudServerManager{
                         double energyWeight = 0;
                         double transmissionPower = 0;
                         double receptionPower = 0;
+                        boolean active = true;
                         
 			// 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
 			//    create a list to store these PEs before creating
@@ -168,7 +169,8 @@ public class DefaultCloudServerManager extends CloudServerManager{
                                         idleEnergyConsumption,
                                         energyWeight,
                                         transmissionPower,
-                                        receptionPower
+                                        receptionPower,
+                                        active
 				);
 			hostList.add(host);
 		}

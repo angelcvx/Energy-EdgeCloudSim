@@ -40,6 +40,7 @@ import edu.boun.edgecloudsim.utils.SimLogger;
 
 public class DefaultEdgeServerManager extends EdgeServerManager{
 	private int hostIdCounter;
+        private int nAutoscalingDevices = 2; //number of the devices that will be used only if neccessary
 
 	public DefaultEdgeServerManager() {
 		hostIdCounter = 0;
@@ -68,8 +69,10 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			// for each host...
 			for (int j=0; j < list.size(); j++) {
 				Host host = list.get(j);
-                                SS.incrementEnergyConsumption(calculateIdleEnergyConsumption(host));
-			}
+                                if (host.isActive()){
+                                    host.setStartedTime(CloudSim.clock());
+                                }
+                        }
 		}
 	}
 
@@ -101,7 +104,7 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 					int ram = Integer.parseInt(vmElement.getElementsByTagName("ram").item(0).getTextContent());
 					long storage = Long.parseLong(vmElement.getElementsByTagName("storage").item(0).getTextContent());
 					long bandwidth = SimSettings.getInstance().getWlanBandwidth() / (hostNodeList.getLength()+vmNodeList.getLength());
-					
+					if (bandwidth < 1) System.out.println("hola");
 					//VM Parameters		
 					EdgeVM vm = new EdgeVM(vmCounter, brokerId, mips, numOfCores, ram, bandwidth, storage, vmm, new CloudletSchedulerTimeShared());
 					vmList.get(hostCounter).add(vm);
@@ -199,10 +202,10 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
 			double maxEnergyConsumption = Double.parseDouble(datacenterElement.getElementsByTagName("maxEnergyConsumption").item(0).getTextContent());
                         double idleEnergyConsumption = Double.parseDouble(datacenterElement.getElementsByTagName("idleEnergyConsumption").item(0).getTextContent());
                         double energyWeight = Double.parseDouble(datacenterElement.getElementsByTagName("energyWeight").item(0).getTextContent());
-			//double transmissionPower = Double.parseDouble(datacenterElement.getElementsByTagName("transmissionPower").item(0).getTextContent());
-                        //double receptionPower = Double.parseDouble(datacenterElement.getElementsByTagName("receptionPower").item(0).getTextContent());
-                        double transmissionPower = 0;
-                        double receptionPower = 0;
+                        boolean active = Integer.parseInt(hostElement.getElementsByTagName("active").item(0).getTextContent()) == 1;
+			double transmissionPower = Double.parseDouble(datacenterElement.getElementsByTagName("transmissionPower").item(0).getTextContent());
+                        double receptionPower = Double.parseDouble(datacenterElement.getElementsByTagName("receptionPower").item(0).getTextContent());
+
 
 // 2. A Machine contains one or more PEs or CPUs/Cores. Therefore, should
 			//    create a list to store these PEs before creating
@@ -227,7 +230,8 @@ public class DefaultEdgeServerManager extends EdgeServerManager{
                                         idleEnergyConsumption,
                                         energyWeight,
                                         transmissionPower,
-                                        receptionPower
+                                        receptionPower,
+                                        active
 				);
 			
                         host.setPlace(new Location(placeTypeIndex, wlan_id, x_pos, y_pos));
