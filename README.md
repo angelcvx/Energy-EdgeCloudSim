@@ -43,4 +43,4 @@ Contributions to Energy-EdgeCloudSim are welcome! Please submit pull requests fo
 
 ## License
 
-This project is licensed under the 
+This project is licensed under the [GNU General Public License v3.0](LICENSE). 
